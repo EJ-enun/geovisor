@@ -1,0 +1,14 @@
+shapely
+geopandas
+geojsonio
+dash
+dash-html-components
+dash-core-components
+dash-bootstrap-components
+numpy
+pandas
+Werkzeug
+plotly
+dash-leaflet
+gunicorn
+
