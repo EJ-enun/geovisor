@@ -41,7 +41,7 @@ app.title = config.name
 
 def fill_array(len_tmp): 
   b = []
-  a = [np.append(b, 'Distance from Industry Center:') for x in range(0, len(len_tmp))]
+  a = [np.append(b, 'Distance from Industry Center(Meters):') for x in range(0, len(len_tmp))]
   df = pd.DataFrame(a, columns=['dist'])
   return df
 
@@ -79,109 +79,6 @@ def getIndustryDict():
         nested_ind = industries[ind_val[0]]
         return nested_ind
 
-
-
-
-def api_call_cities(city, industry, cluster_size):
-    cities = pd.read_csv('python/worldcities.csv')#.to_dict()
-    cities = cities.drop(['capital', 'city_ascii', 'iso2', 'iso3', 'id', 'admin_name'], axis=1)
-    data_lng = cities.query("city == @city")['lng']
-    data_lat = cities.query("city == @city")['lat']
-    data_pop = cities.query("city == @city")['population']
-    data_lng = data_lng.reset_index(drop=True)
-    data_lat = data_lat.reset_index(drop=True)
- 
-     
-    url_3 = 'https://discover.search.hereapi.com/v1/discover?at=52.5228,13.4124&q=telecommunications&limit=25&apikey=7uXzaQsBY2_eFvWyfptFUrMsjzBcVP4nlYc-Udzl2TA'
-
-    url = 'https://discover.search.hereapi.com/v1/discover?at=' + str(data_lat[0]) +','+ str(data_lng[0]) + '&q=' + str(industry) + '&limit=' + str(cluster_size) + '&apikey=7uXzaQsBY2_eFvWyfptFUrMsjzBcVP4nlYc-Udzl2TA'
-
-    #https://discover.search.hereapi.com/v1/discover?at=52.5228,13.4124&q=petrol+station&limit=5
-    url_2 = 'https://geocode.search.hereapi.com/v1/geocode?q=5+Rue+Daunou%2C+75000+Paris%2C+France/Authorization:Bearer[7uXzaQsBY2_eFvWyfptFUrMsjzBcVP4nlYc-Udzl2TA]'
-    geodata = requests.get(url).json()
-
-    gr = [d for d in geodata['items']]
-    title = pd.DataFrame(gr)
-    tile = title['position']
-    return title, data_pop
-
-
-def process_data(new_df):
-
-    # Columns renaming
-    #df.columns = [col.lower() for col in df.columns]
-    df = pd.DataFrame([])
-    # Create a zone per zone/subzone
-    #df['country'] = df['country'].apply(str) + ' ' + df['sub zone'].apply(lambda x: str(x).replace('nan', ''))
-    new_df = new_df.drop(['id','resultType','categories','access'], axis=1)
-    # Extracting latitute and longitude
-    df['lat'] = [d.get('lat') for d in new_df['position']]
-    df['lng'] = [d.get('lng') for d in new_df['position']]
-    df['district'] = [d.get('district') for d in new_df['address']]
-    df['city'] = [d.get('city') for d in new_df['address']]
-    df['postal'] = [d.get('postalCode') for d in new_df['address']]
-    df['title'] = new_df['title']
-    
-    # Saving countries positions (latitude and longitude per subzones)
-    positions = df[['title','city','district','postal','lat', 'lng']]#.drop_duplicates(['zone']).set_index(['zone'])
-
-    # Pivoting per category
-    #df = pd.pivot_table(df, values='count', index=['date', 'zone'], columns=['category'])
-    #df.columns = ['confirmed', 'deaths', 'recovered']
-
-    # Merging locations after pivoting
-    #df = df.join(country_position)
-
-    # Filling nan values with 0
-    #df = df.fillna(0)
-
-    # Compute bubble sizes
-    df['size'] = new_df['distance'].apply(lambda x: (np.sqrt(x/100) + 1) if x > 500 else (np.log(x) / 2 + 1)).replace(np.NINF, 0)
-    
-    # Compute bubble color
-    df['color'] = new_df['distance'].fillna(0).replace(np.inf , 0)
-    
-    return df
-#ttps://discover.search.hereapi.com/v1/discover?at=52.5228,13.4124&q=petrol+station&limit=5
-# Navbar
-navbar = dbc.Nav(className="nav nav-pills", children=[
-    ## logo/home
-    dbc.NavItem(html.Img(src=app.get_asset_url("logo.jpeg"), height="40px")),
-    ## about
-    dbc.NavItem(html.Div([
-        dbc.NavLink("About", href="/", id="about-popover", active=False),
-        dbc.Popover(id="about", is_open=False, target="about-popover", children=[
-            dbc.PopoverHeader("How it works"), dbc.PopoverBody(about.txt)
-        ])
-    ])),
-    ## links
-    dbc.DropdownMenu(label="Links", nav=True, children=[
-        dbc.DropdownMenuItem([html.I(className="fa fa-linkedin"), "  Contacts"], href=config.contacts, target="_blank"), 
-        dbc.DropdownMenuItem([html.I(className="fa fa-github"), "  Code"], href=config.code, target="_blank")
-    ])
-])
-
-
-
-# Input
-city = dbc.FormGroup([
-    html.H4("Select City"),
-    dcc.Dropdown(id="city",options=[{"label":x,"value":x} for x in getCityDict()], value='Delhi')
-]) 
-
-industry = dbc.FormGroup([
-    html.H4("Select Industry"),
-    dcc.Dropdown(id="industry", options=[{'label':x,'value':x} for x in getIndustry()], value='Agriculture')
-])
-
-
-cluster_size = dbc.FormGroup([
-    html.H4("Cluster Size"),
-    dcc.Dropdown(id="cluster_size", options=[{"label":x,"value":x} for x in {'5': 5, '10' : 10, '15':15, '20' : 20 ,'25' : 25, '30' : 30, '35':35, '40':40}], value='15')
-])
-
-input_map = dl.Map(dl.TileLayer(), style={'width': '1000px', 'height': '500px'})
-
 def find_center(coord):
     lat = []
     lng = []
@@ -218,10 +115,113 @@ def haversine(central_coord, list_coord):
     meters = [ R * x for x in cee]  # output distance in meters
     km = [x / 1000.0 for x in meters]  # output distance in kilometers
     
-    df = pd.DataFrame(np.column_stack([meters, km]), columns=['meters', 'km'])
+    df = pd.DataFrame(meters, columns=['meters'])
     return df
 
+    
 
+
+
+def api_call_cities(city, industry, cluster_size):
+    cities = pd.read_csv('python/worldcities.csv')#.to_dict()
+    cities = cities.drop(['capital', 'city_ascii', 'iso2', 'iso3', 'id', 'admin_name'], axis=1)
+    data_lng = cities.query("city == @city")['lng']
+    data_lat = cities.query("city == @city")['lat']
+    data_pop = cities.query("city == @city")['population']
+    data_lng = data_lng.reset_index(drop=True)
+    data_lat = data_lat.reset_index(drop=True)
+ 
+     
+    url_3 = 'https://discover.search.hereapi.com/v1/discover?at=52.5228,13.4124&q=telecommunications&limit=25&apikey=7uXzaQsBY2_eFvWyfptFUrMsjzBcVP4nlYc-Udzl2TA'
+
+    url = 'https://discover.search.hereapi.com/v1/discover?at=' + str(data_lat[0]) +','+ str(data_lng[0]) + '&q=' + str(industry) + '&limit=' + str(cluster_size) + '&apikey=7uXzaQsBY2_eFvWyfptFUrMsjzBcVP4nlYc-Udzl2TA'
+
+    #https://discover.search.hereapi.com/v1/discover?at=52.5228,13.4124&q=petrol+station&limit=5
+    url_2 = 'https://geocode.search.hereapi.com/v1/geocode?q=5+Rue+Daunou%2C+75000+Paris%2C+France/Authorization:Bearer[7uXzaQsBY2_eFvWyfptFUrMsjzBcVP4nlYc-Udzl2TA]'
+    geodata = requests.get(url).json()
+
+    gr = [d for d in geodata['items']]
+    title = pd.DataFrame(gr)
+    tile = title['position']
+    return title, data_pop
+
+def process_data(new_df):
+
+    # Columns renaming
+    #df.columns = [col.lower() for col in df.columns]
+    df = pd.DataFrame([])
+    # Create a zone per zone/subzone
+    #df['country'] = df['country'].apply(str) + ' ' + df['sub zone'].apply(lambda x: str(x).replace('nan', ''))
+    new_df = new_df.drop(['id','resultType','categories','access'], axis=1)
+    # Extracting latitute and longitude
+    df['lat'] = [d.get('lat') for d in new_df['position']]
+    df['lng'] = [d.get('lng') for d in new_df['position']]
+    df['district'] = [d.get('district') for d in new_df['address']]
+    df['city'] = [d.get('city') for d in new_df['address']]
+    df['postal'] = [d.get('postalCode') for d in new_df['address']]
+    df['title'] = new_df['title']
+    
+    # Saving countries positions (latitude and longitude per subzones)
+    positions = df[['title','city','district','postal','lat', 'lng']]#.drop_duplicates(['zone']).set_index(['zone'])
+
+    # Pivoting per category
+    #df = pd.pivot_table(df, values='count', index=['date', 'zone'], columns=['category'])
+    #df.columns = ['confirmed', 'deaths', 'recovered']
+
+    # Merging locations after pivoting
+    #df = df.join(country_position)
+
+    # Filling nan values with 0
+    #df = df.fillna(0)
+
+    # Compute bubble sizes
+    df['size'] = new_df['distance'].apply(lambda x: (np.sqrt(x/100) + 1) if x > 500 else (np.log(x) / 2 + 1)).replace(np.NINF, 0)
+    
+    # Compute bubble color
+    df['color'] = new_df['distance'].fillna(0).replace(np.inf , 0)
+    
+    coords = pd.concat([df['lat'],df['lng']], axis=1)
+    df['meters'] = haversine(find_center(coords), coords)
+    df['dist'] = fill_array(df)
+    
+    
+    return df
+# Navbar
+navbar = dbc.Nav(className="nav nav-pills", children=[
+    ## logo/home
+    dbc.NavItem(html.Img(src=app.get_asset_url("logo.jpeg"), height="40px")),
+    ## about
+    dbc.NavItem(html.Div([
+        dbc.NavLink("About", href="/", id="about-popover", active=False),
+        dbc.Popover(id="about", is_open=False, target="about-popover", children=[
+            dbc.PopoverHeader("How it works"), dbc.PopoverBody(about.txt)
+        ])
+    ])),
+    ## links
+    dbc.DropdownMenu(label="Links", nav=True, children=[
+        dbc.DropdownMenuItem([html.I(className="fa fa-linkedin"), "  Contacts"], href=config.contacts, target="_blank"), 
+        dbc.DropdownMenuItem([html.I(className="fa fa-github"), "  Code"], href=config.code, target="_blank")
+    ])
+])
+
+
+
+# Input
+city = dbc.FormGroup([
+    html.H4("Select City"),
+    dcc.Dropdown(id="city",options=[{"label":x,"value":x} for x in getCityDict()], value='Delhi')
+]) 
+
+industry = dbc.FormGroup([
+    html.H4("Select Industry"),
+    dcc.Dropdown(id="industry", options=[{'label':x,'value':x} for x in getIndustry()], value='Agriculture')
+])
+
+
+cluster_size = dbc.FormGroup([
+    html.H4("Cluster Size"),
+    dcc.Dropdown(id="cluster_size", options=[{"label":x,"value":x} for x in {'5': 5, '10' : 10, '15':15, '20' : 20 ,'25' : 25, '30' : 30, '35':35, '40':40}], value='15')
+])
 
 
 
@@ -261,11 +261,6 @@ app.layout = dbc.Container(fluid=True, children=[
 def update_map_callback(n_clicks, city, industry, cluster_size):
     data, pop = api_call_cities(city, industry, cluster_size)
     tmp = process_data(data)
-    coords = pd.concat([tmp['lat'],tmp['lng']], axis=1)
-    df_meters_km = haversine(find_center(coords), coords)
-    dist = fill_array(tmp)
-    tmp = pd.concat([tmp, df_meters_km, dist], axis=1)
-    #dist = pd.Dataframe(fill_array('Distance from Industry center', len(tmp)))
     map_figure = {
         'data': [
             go.Scattermapbox(
