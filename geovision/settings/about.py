@@ -1,0 +1,2 @@
+
+txt = "Use location and economic data to find the areas in a city with the highest lifetime value. Using econometric indicators and location data like population density, building density and navigable road data we are able to project and forecast the lifetime value of a given location for a given period of time. "
